@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Food Pantry Finder</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        body {
+            background-color: #1c1c1c;
+            color: #e0e0e0;
+            font-family: 'Roboto mono', monospace;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #2a2a2a;
+            padding: 15px 30px;
+        }
+        h1 {
+            color: #fff;
+            font-size: 1.5em;
+            margin: 0;
+        }
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+        nav ul li {
+            margin-right: 20px;
+        }
+        nav ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+        }
+        main {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .content-box {
+            background: #333;
+            padding: 20px;
+            width: 90%;
+            max-width: 1200px;
+        }
+        .search-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .filters {
+            flex: 1;
+            padding: 15px;
+            background: #555;
+        }
+        .results-container {
+            display: flex;
+            gap: 20px;
+            font-family: 'Arial', sans-serif;
+
+        }
+        #results {
+            flex: 1;
+            background: #555;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+
+        }
+        .map-container {
+            flex: 2;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+        }
+        input[type="checkbox"] {
+            margin-right: 8px;
+            width: 20px;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Food Pantry Finder</h1>
+        <nav>
+            <ul>
+                <li><a href="/#/">Shelter</a></li>
+                <li><a href="food">Food</a></li>
+                <!-- <li><a href="resume">Resume</a></li> --->
+                <li><a href="health">Health</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="content-box">
+            <h2>Find Food Pantries</h2>
+            <div class="search-container">
+                <div class="filters">
+                    <form id="searchForm">
+                        <label><input type="checkbox" name="SHOPPING"> Shopping</label>
+                        <label><input type="checkbox" name="DIRECT_DISTRIBUTION"> Direct Distribution</label>
+                        <label><input type="checkbox" name="BOTH"> Both Shopping and Direct Distribution</label>
+                        <button type="submit">Search</button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="results-container">
+                <div id="results"></div>
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <script>
+        let map;
+        let markers = [];
+        let markerGroup;
+    
+        function initMap() {
+            // Initialize the map with a default view (Washington, D.C.)
+            map = L.map('map').setView([38.9072, -77.0369], 12); // Corrected longitude to negative value
+    
+            // Add the tile layer (map tiles from OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+    
+            // Initialize the marker group
+            markerGroup = L.layerGroup().addTo(map);
+        }
+    
+        // Function to calculate distance between two coordinates in miles
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 3958.8; // Radius of the Earth in miles
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+            const a =
+                Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            const d = R * c; // Distance in miles
+            return d;
+        }
+    
+        // Helper function to convert degrees to radians
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+    
+        // Function to clear all markers from the map
+        function clearMarkers() {
+            markerGroup.clearLayers();
+        }
+    
+        // Custom icon for the user's location
+        const userIcon = L.divIcon({
+            html: '📍',
+            iconSize: [25, 25],
+            className: 'user-location'
+        });
+    
+        // Function to create a numbered icon for markers
+        function createNumberedIcon(number) {
+            return L.divIcon({
+                html: `<div style="background-color: #2196F3; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold;">${number}</div>`,
+                iconSize: [24, 24],
+                className: 'numbered-marker'
+            });
+        }
+    
+        // Event listener for the search form submission
+        document.getElementById('searchForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+    
+            let userLat, userLon;
+            if (navigator.geolocation) {
+                const position = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(resolve, reject);
+                });
+                userLat = position.coords.latitude;
+                userLon = position.coords.longitude;
+    
+                // Set the map view to the user's location
+                map.setView([userLat, userLon], 12);
+    
+                // Add a marker for the user's location
+                L.marker([userLat, userLon], {
+                    icon: userIcon,
+                    title: 'Your Location'
+                }).addTo(markerGroup);
+    
+            } else {
+                alert("Geolocation is not supported by this browser.");
+                return;
+            }
+    
+            const formData = new FormData(e.target);
+            const queryParams = new URLSearchParams();
+            for (let [key] of formData.entries()) {
+                queryParams.append(key, "true");
+            }
+    
+            try {
+                const response = await fetch(`/food/search?${queryParams.toString()}`);
+                const data = await response.json();
+                console.log(data);
+    
+                const resultsDiv = document.getElementById('results');
+                resultsDiv.innerHTML = "";
+    
+                clearMarkers();
+    
+                if (data.length === 0) {
+                    resultsDiv.textContent = "No results found.";
+                } else {
+                    const bounds = L.latLngBounds([[userLat, userLon]]);
+    
+                    // *** CHANGE 1: Calculate distance for each result ***
+                    const resultsWithDistance = data.map(item => {
+                        const lat = parseFloat(item["Y"]); // Latitude is in the "Y" column
+                        const lon = parseFloat(item["X"]); // Longitude is in the "X" column
+                        const distance = getDistance(userLat, userLon, lat, lon); // Calculate distance
+                        return { ...item, distance }; // Add distance to the result object
+                    });
+    
+                    // *** CHANGE 2: Sort results by distance ***
+                    resultsWithDistance.sort((a, b) => a.distance - b.distance);
+    
+                    // *** CHANGE 3: Display sorted results ***
+                    resultsWithDistance.forEach((item, index) => {
+                        const agencyName = item["AGENCY_NAM"] || "Unnamed Agency";
+                        const address = item["ADDRESS"] || "Address not available";
+                        const lat = parseFloat(item["Y"]);
+                        const lon = parseFloat(item["X"]);
+                        const distance = item.distance.toFixed(2); // Use pre-calculated distance
+                        const googleMapsLink = `https://www.google.com/maps/search/?api=1&query=${address.replace(/ /g, '+')}`;
+    
+                        // Add a marker for the result
+                        const marker = L.marker([lat, lon], {
+                            icon: createNumberedIcon(index + 1),
+                            title: agencyName
+                        }).addTo(markerGroup);
+    
+                        // Add a popup to the marker
+                        marker.bindPopup(`
+                            <strong>${agencyName}</strong><br>
+                            ${address}<br>
+                            Distance: ${distance} miles
+                        `);
+    
+                        // Extend the map bounds to include this marker
+                        bounds.extend([lat, lon]);
+    
+                        // Add the result to the results list
+                        const div = document.createElement('div');
+                        div.innerHTML = `
+                            <strong>${index + 1}. ${agencyName}</strong><br>
+                            Address: ${address}<br>
+                            Distance: ${distance} miles<br>
+                            <a href="${googleMapsLink}" target="_blank">View on Google Maps</a><br><br>
+                        `;
+                        resultsDiv.appendChild(div);
+                    });
+    
+                    // Fit the map to the bounds of all markers
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                }
+            } catch (error) {
+                console.error("Error fetching search results:", error);
+            }
+        });
+    
+        window.onload = function() {
+            // Automatically submit the form when the page loads
+            document.getElementById('searchForm').submit();
+        };
+        window.onload = initMap;
+    </script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homeless Hub</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <style>
+        body {
+            background-color: #1c1c1c;
+            color: #e0e0e0;
+            font-family: 'Roboto Mono', monospace;
+            margin: 0;
+            padding: 0;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #2a2a2a;
+            padding: 15px 30px;
+        }
+        h1 {
+            color: #fff;
+            font-size: 1.5em;
+            margin: 0;
+        }
+        nav ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+        }
+        nav ul li {
+            margin-right: 20px;
+        }
+        nav ul li a {
+            color: #e0e0e0;
+            text-decoration: none;
+        }
+        main {
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+        }
+        .content-box {
+            background: #333;
+            padding: 20px;
+            width: 90%;
+            max-width: 1200px;
+        }
+        .search-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .filters {
+            flex: 1;
+            padding: 15px;
+            background: #555;
+            
+        }
+        .results-container {
+            display: flex;
+            gap: 20px;
+            font-family: 'Arial', sans-serif;
+
+        }
+        #results {
+            flex: 1;
+            background: #555;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .map-container {
+            flex: 2;
+        }
+        #map {
+            height: 400px;
+            width: 100%;
+        }
+        label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            color: #e0e0e0;
+        }
+        input[type="checkbox"] {
+            margin-right: 8px;
+            width: 20px;
+        }
+        button {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #1976D2;
+        }
+        a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        #output-gpa {
+    font-size: 30px;
+    position: absolute;
+    right: 20px;
+    top: 120px; /* Adjust as needed */
+    color: #fff;
+}
+
+    </style>
+</head>
+<body>
+    
+    <header>
+        <h1>Homeless Hub</h1>
+        <nav>
+            <ul>
+                <li><a href="/#/">Shelter</a></li>
+                <li><a href="food">Food</a></li>P
+                <li><a href="resume">Resume</a></li>
+                <li><a href="health">Health</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="content-box">
+            <h2>Resume Builder</h2>
+            <form id="resume-form">
+                <label for="name">Full Name:</label><br>
+                <input type="text" id="name" required><br><br>
+                
+                <label for="contact">Contact Information (Phone/Email):</label><br>
+                <input type="text" id="contact" required><br><br>
+                
+                <label for="job">Previous Jobs (if any):</label><br>
+                <input type="text" id="job" placeholder="Job title, Company name"><br><br>
+                
+                <label for="skills">Skills (comma-separated):</label><br>
+                <input type="text" id="skills" required><br><br>
+                
+                <label for="education">Education Level:</label><br>
+                <input type="text" id="education" required><br><br>
+                
+                <label for="volunteer">Volunteer Work (if any):</label><br>
+                <input type="text" id="volunteer" placeholder="Organization, Role"><br><br>
+                
+                <label for="references">References (if any):</label><br>
+                <input type="text" id="references" placeholder="Name, Contact"><br><br>
+
+                <label for="gpa">GPA:</label><br>
+                <input type="text" id="gpa" placeholder="HS/college GPA"><br><br>
+                
+                <button type="button" onclick="generateResume()">Generate Resume</button>
+            </form>
+        
+            <div id="resume-output" style="display:none;">
+                <h2>Your Resume</h2>
+                <p id="output-name"></p>
+                <p id="output-contact"></p>
+                <p id="output-job"></p>
+                <p id="output-skills"></p>
+                <p id="output-education"></p>
+                <p id="output-volunteer"></p>
+                <p id="output-references"></p>
+                <p id="output-gpa"></p>
+                <button id="download-pdf" onclick="downloadPDF()">Download as PDF</button>
+            </div>
+        
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+            <script>
+                function generateResume() {
+                    var name = document.getElementById("name").value;
+                    var contact = document.getElementById("contact").value;
+                    var job = document.getElementById("job").value;
+                    var skills = document.getElementById("skills").value;
+                    var education = document.getElementById("education").value;
+                    var volunteer = document.getElementById("volunteer").value;
+                    var references = document.getElementById("references").value;
+                    var references = document.getElementById("gpa").value;
+
+                    document.getElementById("resume-output").style.display = "block";
+
+                    document.getElementById("output-name").innerHTML = "<strong>Name:</strong> " + name;
+                    document.getElementById("output-contact").innerHTML = "<strong>Contact Information:</strong> " + contact;
+                    document.getElementById("output-job").innerHTML = "<strong>Previous Jobs:</strong> " + job;
+                    document.getElementById("output-skills").innerHTML = "<strong>Skills:</strong> " + skills;
+                    document.getElementById("output-education").innerHTML = "<strong>Education:</strong> " + education;
+                    document.getElementById("output-volunteer").innerHTML = "<strong>Volunteer Work:</strong> " + volunteer;
+                    document.getElementById("output-references").innerHTML = "<strong>References:</strong> " + references;
+                    document.getElementById("output-gpa").innerHTML = "<strong>GPA:</strong> " + gpa;
+                }
+
+                function downloadPDF() {
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF();
+
+                    var name = document.getElementById("name").value;
+                    var contact = document.getElementById("contact").value;
+                    var job = document.getElementById("job").value;
+                    var skills = document.getElementById("skills").value;
+                    var education = document.getElementById("education").value;
+                    var volunteer = document.getElementById("volunteer").value;
+                    var references = document.getElementById("references").value;
+
+                    doc.setFont("times", "normal");
+                    doc.setFontSize(30);
+                    doc.text(name, 20, 30);
+
+                    doc.setLineWidth(0.5);
+                    doc.line(20, 35, 190, 35);
+
+                    doc.setFontSize(14);
+
+                    doc.text("Contact Information: " + contact, 20, 50);
+                    doc.text("Previous Jobs: " + job, 20, 60);
+                    doc.text("Skills: " + skills, 20, 70);
+                    doc.text("Education: " + education, 20, 80);
+                    doc.text("Volunteer Work: " + volunteer, 20, 90);
+                    doc.text("References: " + references, 20, 100);
+
+                    doc.save(name + "_Resume.pdf");
+                }
+            </script>
+            
+            
+        </section>
+    </main>
+
+    
+</body>
+</html>
