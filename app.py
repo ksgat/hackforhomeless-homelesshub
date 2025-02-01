@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, send_file
 import pandas as pd
+import os
 
 app = Flask(__name__)
 
@@ -61,5 +62,6 @@ def search_food_pantries():
     # Return the filtered data as JSON
     return jsonify(filtered_df.to_dict(orient="records"))
 
-if __name__ == "__main__":
-    app.run(debug=True)
+if __name__ == '__main__':
+    port = int(os.environ.get('PORT', 5000))  # Default to 5000 if no PORT is set
+    app.run(host='0.0.0.0', port=port)
